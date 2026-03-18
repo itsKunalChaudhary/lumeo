@@ -10,7 +10,7 @@ import { ThemeProvider } from "@/components/theme-provicer";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "Normal Human",
+  title: "Lumeo",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

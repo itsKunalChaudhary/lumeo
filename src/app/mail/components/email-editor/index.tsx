@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 
 import { generate } from './action';
 import { readStreamableValue } from 'ai/rsc';
-import { Separator } from "@/components/ui/separator";
 import { useThread } from "../../use-thread";
 import useThreads from "../../use-threads";
 import { api } from "@/trpc/react";
@@ -34,9 +33,13 @@ type EmailEditorProps = {
     onCcChange: (values: { label: string, value: string }[]) => void;
 
     defaultToolbarExpand?: boolean;
+    defaultBody?: string;
+    onBodyChange?: (html: string) => void;
+    handleSaveDraft?: (value: string) => void;
+    isSavingDraft?: boolean;
 }
 
-const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, isSending, onToChange, onCcChange, defaultToolbarExpand }: EmailEditorProps) => {
+const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, isSending, onToChange, onCcChange, defaultToolbarExpand, defaultBody, onBodyChange, handleSaveDraft, isSavingDraft }: EmailEditorProps) => {
 
     const [ref] = useAutoAnimate();
     const [accountId] = useLocalStorage('accountId', '');
@@ -60,10 +63,13 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
 
 
 
+    const isMac = typeof window !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+
     const customText = Text.extend({
         addKeyboardShortcuts() {
             return {
-                "Meta-j": () => {
+                // "Mod" maps to Cmd on Mac and Ctrl on Windows/Linux
+                "Mod-j": () => {
                     aiGenerate(this.editor.getText());
                     return true;
                 },
@@ -75,13 +81,16 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
     const editor = useEditor({
         autofocus: false,
         extensions: [StarterKit, customText, GhostExtension],
+        content: defaultBody,
         editorProps: {
             attributes: {
                 placeholder: "Write your email here..."
             }
         },
-        onUpdate: ({ editor, transaction }) => {
-            setValue(editor.getHTML())
+        onUpdate: ({ editor }) => {
+            const html = editor.getHTML()
+            setValue(html)
+            onBodyChange?.(html)
         }
     });
 
@@ -108,7 +117,7 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
         editor.commands.insertContent(generation)
     }, [generation, editor]);
 
-    const [value, setValue] = React.useState('');
+    const [value, setValue] = React.useState(defaultBody ?? '');
 
 
 
@@ -143,18 +152,20 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
                 </div>
             </div>
 
-            <div className="prose w-full px-4">
+            <div className="prose dark:prose-invert w-full px-4 relative">
                 <EditorContent value={value} editor={editor} placeholder="Write your email here..." />
+                {value.trim() && (
+                    <p className="not-prose text-xs text-muted-foreground/50 mt-1 select-none">
+                        {isMac ? 'Cmd' : 'Ctrl'}+J for AI autocomplete
+                    </p>
+                )}
             </div>
-            <Separator />
-            <div className="py-3 px-4 flex items-center justify-between">
-                <span className="text-sm">
-                    Tip: Press{" "}
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">
-                        Cmd + J
-                    </kbd>{" "}
-                    for AI autocomplete
-                </span>
+            <div className="flex justify-end items-center gap-2 px-4 py-2">
+                {handleSaveDraft && (
+                    <Button variant="outline" disabled={isSavingDraft} onClick={() => handleSaveDraft(value)}>
+                        {isSavingDraft ? 'Saving...' : 'Save to Draft'}
+                    </Button>
+                )}
                 <Button onClick={async () => { editor?.commands.clearContent(); await handleSend(value) }} isLoading={isSending}>
                     Send
                 </Button>

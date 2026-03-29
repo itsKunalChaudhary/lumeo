@@ -44,15 +44,20 @@ const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], la
                 ), value: input
             }) : options}
             classNames={{
-                control: () => {
-                    return '!border-none !outline-none !ring-0 !shadow-none focus:border-none focus:outline-none focus:ring-0 focus:shadow-none dark:bg-transparent'
-                },
-                multiValue: () => {
-                    return 'dark:!bg-gray-700'
-                },
-                multiValueLabel: () => {
-                    return 'dark:text-white dark:bg-gray-700 rounded-md'
-                }
+                control: () => '!border-none !outline-none !ring-0 !shadow-none dark:bg-transparent',
+                multiValue: () => 'dark:!bg-gray-700',
+                multiValueLabel: () => 'dark:text-white dark:bg-gray-700 rounded-md',
+                menu: () => 'dark:!bg-gray-900 dark:!border dark:!border-gray-700',
+                menuList: () => 'dark:!bg-gray-900',
+                option: ({ isFocused, isSelected }: { isFocused: boolean; isSelected: boolean }) =>
+                    isSelected
+                        ? 'dark:!bg-blue-700 dark:!text-white'
+                        : isFocused
+                            ? 'dark:!bg-gray-700 dark:!text-white'
+                            : 'dark:!bg-gray-900 dark:!text-white',
+                input: () => 'dark:!text-white',
+                singleValue: () => 'dark:!text-white',
+                placeholder: () => 'dark:!text-gray-400',
             }}
             classNamePrefix="select"
         />

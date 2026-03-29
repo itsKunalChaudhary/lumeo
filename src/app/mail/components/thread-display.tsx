@@ -1,3 +1,4 @@
+import React from "react";
 import EmailEditor from "./email-editor";
 import {
   Archive,
@@ -8,6 +9,7 @@ import {
   Reply,
   ReplyAll,
   Trash2,
+  X,
 } from "lucide-react"
 
 import {
@@ -57,6 +59,10 @@ export function ThreadDisplay() {
   const today = new Date()
   const _thread = threads?.find(t => t.id === threadId)
   const [isSearching, setIsSearching] = useAtom(isSearchingAtom)
+  const [isReplyOpen, setIsReplyOpen] = React.useState(false)
+
+  // Close reply box when switching threads
+  React.useEffect(() => { setIsReplyOpen(false) }, [threadId])
 
   const [accountId] = useLocalStorage('accountId', '')
   const { data: foundThread } = api.mail.getThreadById.useQuery({
@@ -206,7 +212,7 @@ export function ThreadDisplay() {
       {isSearching ? <SearchDisplay /> : <>
 
         {thread ? (
-          <div className="flex flex-col flex-1 overflow-scroll">
+          <div className="flex flex-col flex-1 overflow-hidden">
             <div className="flex items-start p-4">
               <div className="flex items-start gap-4 text-sm">
                 <Avatar>
@@ -232,16 +238,29 @@ export function ThreadDisplay() {
               )}
             </div>
             <Separator />
-            <div className="max-h-[calc(100vh-500px)] overflow-scroll flex flex-col">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-6 flex flex-col gap-4">
                 {thread.emails.map(email => {
                   return <EmailDisplay key={email.id} email={email} />
                 })}
+                {/* Reply button flows with content, scrolls with thread */}
+                <div className="flex justify-end pb-2">
+                  <button
+                    onClick={() => setIsReplyOpen(o => !o)}
+                    className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
+                  >
+                    {isReplyOpen ? <X className="h-4 w-4" /> : <Reply className="h-4 w-4" />}
+                    {isReplyOpen ? 'Close' : 'Reply'}
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex-1"></div>
-            <Separator className="mt-auto" />
-            <ReplyBox />
+            {isReplyOpen && (
+              <>
+                <Separator />
+                <ReplyBox />
+              </>
+            )}
           </div>
         ) : (
           <>

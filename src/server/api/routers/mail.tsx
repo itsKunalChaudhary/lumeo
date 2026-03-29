@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import Account from "@/lib/account";
 import { syncEmailsToDatabase } from "@/lib/sync-to-db";
@@ -7,6 +8,7 @@ import { getEmailDetails } from "@/lib/aurinko";
 import type { Prisma } from "@prisma/client";
 import { emailAddressSchema } from "@/lib/types";
 import { FREE_CREDITS_PER_DAY } from "@/app/constants";
+import axios from "axios";
 
 export const authoriseAccountAccess = async (accountId: string, userId: string) => {
     const account = await db.account.findFirst({
@@ -84,6 +86,12 @@ export const mailRouter = createTRPCRouter({
             equals: input.done
         }
 
+        const fiftyDaysAgo = new Date()
+        fiftyDaysAgo.setDate(fiftyDaysAgo.getDate() - 50)
+        filter.lastMessageDate = {
+            gte: fiftyDaysAgo
+        }
+
         const threads = await ctx.db.thread.findMany({
             where: filter,
             include: {
@@ -103,7 +111,7 @@ export const mailRouter = createTRPCRouter({
                     }
                 }
             },
-            take: 15,
+            take: 50,
             orderBy: {
                 lastMessageDate: "desc"
             }
@@ -204,7 +212,51 @@ export const mailRouter = createTRPCRouter({
         const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
         if (!account) throw new Error("Invalid token")
         const acc = new Account(account.token)
-        acc.syncEmails()
+        try {
+            await acc.syncEmails()
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 401) {
+                throw new TRPCError({
+                    code: 'UNAUTHORIZED',
+                    message: 'AURINKO_TOKEN_DEAD',
+                })
+            }
+            throw error
+        }
+    }),
+    resetAccount: protectedProcedure.input(z.object({
+        accountId: z.string()
+    })).mutation(async ({ ctx, input }) => {
+        const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
+
+        const threadIds = (await ctx.db.thread.findMany({
+            where: { accountId: account.id },
+            select: { id: true }
+        })).map(t => t.id)
+
+        const emailIds = (await ctx.db.email.findMany({
+            where: { threadId: { in: threadIds } },
+            select: { id: true }
+        })).map(e => e.id)
+
+        // Delete leaf records first
+        await ctx.db.emailAttachment.deleteMany({ where: { emailId: { in: emailIds } } })
+
+        // Clear implicit many-to-many join rows (to/cc/bcc/replyTo ↔ EmailAddress)
+        for (const emailId of emailIds) {
+            await ctx.db.email.update({
+                where: { id: emailId },
+                data: { to: { set: [] }, cc: { set: [] }, bcc: { set: [] }, replyTo: { set: [] } }
+            })
+        }
+
+        await ctx.db.email.deleteMany({ where: { threadId: { in: threadIds } } })
+        await ctx.db.thread.deleteMany({ where: { accountId: account.id } })
+        await ctx.db.emailAddress.deleteMany({ where: { accountId: account.id } })
+        await ctx.db.account.update({
+            where: { id: account.id },
+            data: { nextDeltaToken: null }
+        })
     }),
     setUndone: protectedProcedure.input(z.object({
         threadId: z.string().optional(),
@@ -299,6 +351,60 @@ export const mailRouter = createTRPCRouter({
             replyTo: input.replyTo,
             from: input.from,
             inReplyTo: input.inReplyTo,
+        })
+    }),
+    saveDraft: protectedProcedure.input(z.object({
+        accountId: z.string(),
+        body: z.string(),
+        subject: z.string(),
+        from: emailAddressSchema,
+        to: z.array(emailAddressSchema),
+        cc: z.array(emailAddressSchema).optional(),
+        bcc: z.array(emailAddressSchema).optional(),
+        replyTo: emailAddressSchema,
+    })).mutation(async ({ ctx, input }) => {
+        const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
+        const now = new Date()
+
+        // Helper: find or create an EmailAddress in this account
+        const upsertAddr = (addr: { name: string; address: string }) =>
+            ctx.db.emailAddress.upsert({
+                where: { accountId_address: { accountId: account.id, address: addr.address } },
+                create: { accountId: account.id, address: addr.address, name: addr.name },
+                update: {},
+            })
+
+        const fromAddr = await upsertAddr(input.from)
+        const toAddrs = await Promise.all(input.to.map(upsertAddr))
+        const ccAddrs = await Promise.all((input.cc ?? []).map(upsertAddr))
+
+        await ctx.db.thread.create({
+            data: {
+                subject: input.subject || '(no subject)',
+                lastMessageDate: now,
+                participantIds: [input.from.address, ...input.to.map(t => t.address)],
+                accountId: account.id,
+                draftStatus: true,
+                inboxStatus: false,
+                sentStatus: false,
+                emails: {
+                    create: {
+                        subject: input.subject || '(no subject)',
+                        body: input.body,
+                        bodySnippet: input.body.replace(/<[^>]*>/g, '').slice(0, 200),
+                        createdTime: now,
+                        lastModifiedTime: now,
+                        sentAt: now,
+                        receivedAt: now,
+                        internetMessageId: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                        hasAttachments: false,
+                        emailLabel: 'draft',
+                        from: { connect: { id: fromAddr.id } },
+                        to: toAddrs.length ? { connect: toAddrs.map(a => ({ id: a.id })) } : undefined,
+                        cc: ccAddrs.length ? { connect: ccAddrs.map(a => ({ id: a.id })) } : undefined,
+                    },
+                },
+            },
         })
     }),
     getEmailSuggestions: protectedProcedure.input(z.object({

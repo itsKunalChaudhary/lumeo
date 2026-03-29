@@ -2,11 +2,14 @@ import React, { type ComponentProps } from "react"
 import DOMPurify from 'dompurify';
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from "date-fns"
+import { Archive, ArchiveRestore } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useThread } from "@/app/mail/use-thread"
 import { api, type RouterOutputs } from "@/trpc/react"
 import { useAtom } from "jotai"
@@ -19,7 +22,16 @@ import { isSearchingAtom } from "./search-bar"
 import { format } from "date-fns";
 
 export function ThreadList() {
-  const { threads, isFetching } = useThreads();
+  const { threads, isFetching, accountId } = useThreads();
+  const [done] = useLocalStorage('normalhuman-done', false)
+  const utils = api.useUtils()
+
+  const archive = api.mail.setDone.useMutation({
+    onSuccess: () => utils.mail.getThreads.invalidate()
+  })
+  const unarchive = api.mail.setUndone.useMutation({
+    onSuccess: () => utils.mail.getThreads.invalidate()
+  })
 
   const [threadId, setThreadId] = useThread();
   const [parent] = useAutoAnimate(/* optional config */);
@@ -43,11 +55,12 @@ export function ThreadList() {
               {format(new Date(date), "MMMM d, yyyy")}
             </div>
             {threads.map((item) => (
-              <button
+              <div
                 id={`thread-${item.id}`}
                 key={item.id}
+                role="button"
                 className={cn(
-                  "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all relative",
+                  "group flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all relative cursor-pointer",
                   visualMode &&
                   selectedThreadIds.includes(item.id) &&
                   "bg-blue-200 dark:bg-blue-900"
@@ -108,7 +121,44 @@ export function ThreadList() {
                     ))}
                   </div>
                 ) : null}
-              </button>
+                <div className="flex justify-end w-full opacity-0 group-hover:opacity-100 transition-opacity -mb-1">
+                  {!done ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            archive.mutate({ threadId: item.id, accountId })
+                          }}
+                        >
+                          <Archive className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Archive</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            unarchive.mutate({ threadId: item.id, accountId })
+                          }}
+                        >
+                          <ArchiveRestore className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Unarchive</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
             ))}
           </React.Fragment>
         ))}

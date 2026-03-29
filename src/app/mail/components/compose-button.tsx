@@ -10,7 +10,8 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "@/components/ui/drawer"
-import { Pencil } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Pencil, X } from "lucide-react"
 
 import React from 'react'
 import EmailEditor from "./email-editor"
@@ -18,12 +19,13 @@ import { api } from "@/trpc/react"
 import { useLocalStorage } from "usehooks-ts"
 import { toast } from "sonner"
 
-const ComposeButton = () => {
+const ComposeButton = ({ isCollapsed }: { isCollapsed?: boolean }) => {
     const [open, setOpen] = React.useState(false)
     const [accountId] = useLocalStorage('accountId', '')
     const [toValues, setToValues] = React.useState<{ label: string; value: string; }[]>([])
     const [ccValues, setCcValues] = React.useState<{ label: string; value: string; }[]>([])
     const [subject, setSubject] = React.useState<string>('')
+    const [draftBody, setDraftBody] = useLocalStorage('normalhuman-draft-body', '')
     const { data: account } = api.mail.getMyAccount.useQuery({ accountId })
 
 
@@ -43,6 +45,32 @@ const ComposeButton = () => {
     }, []);
 
     const sendEmail = api.mail.sendEmail.useMutation()
+    const saveDraft = api.mail.saveDraft.useMutation()
+
+    const handleSaveDraft = async (value: string) => {
+        if (!account) return
+        saveDraft.mutate({
+            accountId,
+            body: value,
+            subject,
+            from: { name: account.name ?? 'Me', address: account.emailAddress ?? 'me@example.com' },
+            to: toValues.map(to => ({ name: to.value, address: to.value })),
+            cc: ccValues.map(cc => ({ name: cc.value, address: cc.value })),
+            replyTo: { name: account.name ?? 'Me', address: account.emailAddress ?? 'me@example.com' },
+        }, {
+            onSuccess: () => {
+                toast.success("Draft saved")
+                setOpen(false)
+                setDraftBody('')
+                setToValues([])
+                setCcValues([])
+                setSubject('')
+            },
+            onError: (error) => {
+                toast.error("Failed to save draft: " + error.message)
+            }
+        })
+    }
 
     const handleSend = async (value: string) => {
         console.log(account)
@@ -62,6 +90,10 @@ const ComposeButton = () => {
             onSuccess: () => {
                 toast.success("Email sent")
                 setOpen(false)
+                setDraftBody('')
+                setToValues([])
+                setCcValues([])
+                setSubject('')
             },
             onError: (error) => {
                 console.log(error)
@@ -73,15 +105,35 @@ const ComposeButton = () => {
 
     return (
         <Drawer open={open} onOpenChange={setOpen}>
-            <DrawerTrigger asChild>
-                <Button>
-                    <Pencil className='size-4 mr-1' />
-                    Compose
-                </Button>
-            </DrawerTrigger>
+            {isCollapsed ? (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <DrawerTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                                <Pencil className='size-4' />
+                            </Button>
+                        </DrawerTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Compose</TooltipContent>
+                </Tooltip>
+            ) : (
+                <DrawerTrigger asChild>
+                    <Button>
+                        <Pencil className='size-4 mr-1' />
+                        Compose
+                    </Button>
+                </DrawerTrigger>
+            )}
             <DrawerContent className="">
                 <DrawerHeader>
-                    <DrawerTitle>Compose Email</DrawerTitle>
+                    <div className="flex items-center justify-between">
+                        <DrawerTitle>Compose Email</DrawerTitle>
+                        <DrawerClose asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </DrawerClose>
+                    </div>
                     <EmailEditor
                         toValues={toValues}
                         ccValues={ccValues}
@@ -99,6 +151,12 @@ const ComposeButton = () => {
                         to={toValues.map(to => to.value)}
                         handleSend={handleSend}
                         isSending={sendEmail.isPending}
+
+                        defaultBody={draftBody || undefined}
+                        onBodyChange={setDraftBody}
+
+                        handleSaveDraft={handleSaveDraft}
+                        isSavingDraft={saveDraft.isPending}
 
                         defaultToolbarExpand
                     />

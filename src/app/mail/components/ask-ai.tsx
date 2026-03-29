@@ -44,7 +44,7 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
 
     if (isCollapsed) return null;
     return (
-        <div className='p-4 mb-14'>
+        <div className='p-4'>
 
             <PremiumBanner />
             <div className="h-4"></div>

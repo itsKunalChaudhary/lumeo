@@ -8,6 +8,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { api } from "@/trpc/react"
 import { Webhook } from "lucide-react"
 
@@ -67,12 +68,16 @@ const WebhookDebugger = () => {
 
     return (
         <Dialog>
-            <DialogTrigger asChild>
-                <Button>
-                    <Webhook className="size-4 mr-1" />
-                    Debug Webhooks
-                </Button>
-            </DialogTrigger>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Webhook className="size-4" />
+                        </Button>
+                    </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right">Debug Webhooks</TooltipContent>
+            </Tooltip>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Webhook Debugger</DialogTitle>

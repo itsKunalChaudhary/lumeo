@@ -15,15 +15,21 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { AccountSwitcher } from "@/app/mail/components/account-switcher"
 import { ThreadDisplay } from "./thread-display"
 import { ThreadList } from "./thread-list"
 import { useLocalStorage } from "usehooks-ts"
 import SideBar from "./sidebar"
-import SearchBar, { isSearchingAtom } from "./search-bar"
-import { useAtom } from "jotai"
+import SearchBar from "./search-bar"
 import AskAI from "./ask-ai"
+import { UserButton } from "@clerk/nextjs"
+import { ModeToggle } from "@/components/theme-toggle"
+import ComposeButton from "./compose-button"
+import WebhookDebugger from "./webhook-debugger"
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useThread } from "@/app/mail/use-thread"
 
 interface MailProps {
   defaultLayout: number[] | undefined
@@ -38,99 +44,115 @@ export function Mail({
 }: MailProps) {
   const [done, setDone] = useLocalStorage('normalhuman-done', false)
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed)
+  const [threadId] = useThread()
 
+  // Derive thread-list / email-display split from stored layout (indices 1 & 2)
+  const tl = defaultLayout[1] ?? 32
+  const ed = defaultLayout[2] ?? 48
+  const threadListDefault = Math.round((tl / (tl + ed)) * 100)
+  const emailDisplayDefault = 100 - threadListDefault
 
   return (
     <TooltipProvider delayDuration={0}>
-      <ResizablePanelGroup
-        direction="horizontal"
-        onLayout={(sizes: number[]) => {
-          document.cookie = `react-resizable-panels:layout:mail=${JSON.stringify(
-            sizes
-          )}`
-        }}
-        className="items-stretch h-full min-h-screen"
-      >
-        <ResizablePanel
-          defaultSize={defaultLayout[0]}
-          collapsedSize={navCollapsedSize}
-          collapsible={true}
-          minSize={15}
-          maxSize={40}
-          onCollapse={() => {
-            setIsCollapsed(true)
-            document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
-              true
-            )}`
-          }}
-          onResize={() => {
-            setIsCollapsed(false)
-            document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
-              false
-            )}`
-          }}
-          className={cn(
-            isCollapsed &&
-            "min-w-[50px] transition-all duration-300 ease-in-out"
-          )}
-        >
-          <div className="flex flex-col h-full flex-1">
-            <div
-              className={cn(
-                "flex h-[52px] items-center justify-center",
-                isCollapsed ? "h-[52px]" : "px-2"
-              )}
-            >
-              <AccountSwitcher isCollapsed={isCollapsed} />
-            </div>
-            <Separator />
-            <SideBar isCollapsed={isCollapsed} />
-            <div className="flex-1"></div>
-            <AskAI isCollapsed={isCollapsed} />
-          </div>
+      <div className="flex h-full min-h-screen">
 
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
-          <Tabs defaultValue="inbox" value={done ? 'done' : 'inbox'} onValueChange={tab => {
-            if (tab === 'done') {
-              setDone(true)
-            } else {
-              setDone(false)
-            }
-          }}>
-            <div className="flex items-center px-4 py-2">
-              <h1 className="text-xl font-bold">Inbox</h1>
-              <TabsList className="ml-auto">
-                <TabsTrigger
-                  value="inbox"
-                  className="text-zinc-600 dark:text-zinc-200"
-                >
-                  Inbox
-                </TabsTrigger>
-                <TabsTrigger
-                  value="done"
-                  className="text-zinc-600 dark:text-zinc-200"
-                >
-                  Done
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            <Separator />
-            <SearchBar />
-            <TabsContent value="inbox" className="m-0">
-              <ThreadList />
-            </TabsContent>
-            <TabsContent value="done" className="m-0">
-              <ThreadList />
-            </TabsContent>
-          </Tabs>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={defaultLayout[2]} minSize={30}>
-          <ThreadDisplay />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        {/* ── Fixed-width sidebar (not resizable) ── */}
+        <div className={cn(
+          "flex-shrink-0 flex flex-col border-r transition-all duration-300 ease-in-out overflow-hidden",
+          isCollapsed ? "w-[50px]" : "w-1/3"
+        )}>
+          <div className={cn(
+            "flex h-[52px] items-center justify-center",
+            isCollapsed ? "h-[52px]" : "px-2"
+          )}>
+            <AccountSwitcher isCollapsed={isCollapsed} />
+          </div>
+          <Separator />
+          <SideBar isCollapsed={isCollapsed} />
+          <div className="flex-1" />
+          <AskAI isCollapsed={isCollapsed} />
+          <Separator />
+          <div className={cn(
+            "p-2 flex items-center gap-1",
+            isCollapsed ? "flex-col justify-evenly" : "flex-row flex-wrap justify-evenly"
+          )}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div><UserButton /></div>
+              </TooltipTrigger>
+              <TooltipContent side="right">Account</TooltipContent>
+            </Tooltip>
+            <ModeToggle />
+            <ComposeButton isCollapsed={true} />
+            {process.env.NODE_ENV === 'development' && <WebhookDebugger />}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(c => !c)} className="h-8 w-8">
+                  {isCollapsed
+                    ? <PanelLeftOpen className="h-4 w-4" />
+                    : <PanelLeftClose className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {isCollapsed ? 'Expand sidebar' : 'Hide sidebar'}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+
+        {/* ── Thread list + email display (resizable between each other) ── */}
+        <ResizablePanelGroup
+          direction="horizontal"
+          onLayout={(sizes: number[]) => {
+            document.cookie = `react-resizable-panels:layout:mail=${JSON.stringify(sizes)}`
+          }}
+          className="flex-1 h-full"
+        >
+          <ResizablePanel
+            id="threadlist"
+            order={1}
+            defaultSize={threadListDefault}
+            minSize={20}
+          >
+            <Tabs defaultValue="inbox" value={done ? 'done' : 'inbox'} onValueChange={tab => {
+              setDone(tab === 'done')
+            }}>
+              <div className="flex items-center px-4 py-2">
+                <h1 className="text-xl font-bold">Inbox</h1>
+                <TabsList className="ml-auto">
+                  <TabsTrigger value="inbox" className="text-zinc-600 dark:text-zinc-200">
+                    Inbox
+                  </TabsTrigger>
+                  <TabsTrigger value="done" className="text-zinc-600 dark:text-zinc-200">
+                    Archived
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <Separator />
+              <SearchBar />
+              <TabsContent value="inbox" className="m-0">
+                <ThreadList />
+              </TabsContent>
+              <TabsContent value="done" className="m-0">
+                <ThreadList />
+              </TabsContent>
+            </Tabs>
+          </ResizablePanel>
+
+          {!!threadId && <ResizableHandle withHandle />}
+          {!!threadId && (
+            <ResizablePanel
+              id="emaildisplay"
+              order={2}
+              defaultSize={emailDisplayDefault}
+              minSize={25}
+            >
+              <ThreadDisplay />
+            </ResizablePanel>
+          )}
+        </ResizablePanelGroup>
+
+      </div>
     </TooltipProvider>
   )
 }

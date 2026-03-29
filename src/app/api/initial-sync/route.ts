@@ -20,7 +20,13 @@ export const POST = async (req: NextRequest) => {
     if (!dbAccount) return NextResponse.json({ error: "ACCOUNT_NOT_FOUND" }, { status: 404 });
 
     const account = new Account(dbAccount.token)
-    await account.createSubscription()
+    try {
+        await account.createSubscription()
+    } catch (err) {
+        // Subscription creation can fail in dev (localhost not reachable by Aurinko)
+        // or if a subscription already exists — neither should block the email sync.
+        console.warn('createSubscription failed (non-fatal):', err)
+    }
     const response = await account.performInitialSync()
     if (!response) return NextResponse.json({ error: "FAILED_TO_SYNC" }, { status: 500 });
 

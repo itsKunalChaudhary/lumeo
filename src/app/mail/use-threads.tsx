@@ -2,6 +2,8 @@ import { api } from '@/trpc/react'
 import { getQueryKey } from '@trpc/react-query'
 import React from 'react'
 import { useLocalStorage } from 'usehooks-ts'
+import { toast } from 'sonner'
+import { getAurinkoReconnectUrl } from '@/lib/aurinko'
 
 const useThreads = () => {
     const { data: accounts } = api.mail.getAccounts.useQuery()
@@ -9,17 +11,70 @@ const useThreads = () => {
     const [tab] = useLocalStorage('normalhuman-tab', 'inbox')
     const [done] = useLocalStorage('normalhuman-done', false)
     const queryKey = getQueryKey(api.mail.getThreads, { accountId, tab, done }, 'query')
+
+    // FIX: Trigger a real incremental sync from Aurinko whenever accountId/tab changes.
+    // Without this, the UI only re-reads from DB every 5s but never fetches NEW emails
+    // from Aurinko — so the latest emails never appear after initial login.
+    const showReconnectToast = React.useCallback(() => {
+        toast.error('Email connection expired', {
+            description: 'Your account token is no longer valid. Reconnect to resume syncing.',
+            action: {
+                label: 'Reconnect',
+                onClick: async () => {
+                    try {
+                        const url = await getAurinkoReconnectUrl('Google')
+                        window.location.href = url
+                    } catch (e) {
+                        toast.error((e as Error).message)
+                    }
+                }
+            },
+            duration: Infinity,
+        })
+    }, [])
+
+    const { mutate: syncEmails } = api.mail.syncEmails.useMutation({
+        onError: (error) => {
+            if (error.data?.code === 'UNAUTHORIZED') {
+                showReconnectToast()
+            }
+        }
+    })
+
+    React.useEffect(() => {
+        if (!accountId) return
+        // Sync on mount and whenever the account changes, then refetch from DB
+        syncEmails({ accountId }, {
+            onSuccess: () => { void refetch() }
+        })
+    }, [accountId])
+
     const { data: threads, isFetching, refetch } = api.mail.getThreads.useQuery({
         accountId,
         done,
         tab
-    }, { enabled: !!accountId && !!tab, placeholderData: (e) => e, refetchInterval: 1000 * 5 })
+    }, {
+        enabled: !!accountId && !!tab,
+        placeholderData: (e) => e,
+        // FIX: Reduced from 5s to 30s — the 5s poll only re-reads the DB, which is
+        // fine for thread status updates (done/read), but actual new email fetching
+        // is now driven by syncEmails above, not this poll.
+        refetchInterval: 1000 * 30
+    })
+
+    // Manual refresh: re-syncs from Aurinko then immediately refetches threads
+    const syncAndRefetch = React.useCallback(() => {
+        if (!accountId) return
+        syncEmails({ accountId }, {
+            onSuccess: () => { void refetch() }
+        })
+    }, [accountId, syncEmails, refetch])
 
     return {
         threads,
         isFetching,
         account: accounts?.find((account) => account.id === accountId),
-        refetch,
+        refetch: syncAndRefetch,   // now triggers a real Aurinko sync + DB refetch
         accounts,
         queryKey,
         accountId

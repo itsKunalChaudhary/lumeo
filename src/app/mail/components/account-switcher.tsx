@@ -28,8 +28,8 @@ export function AccountSwitcher({
 
   React.useEffect(() => {
     if (accounts && accounts.length > 0) {
-      if (accountId) return
-      setAccountId(accounts[0]!.id)
+      const isValid = accounts.some((a) => a.id === accountId)
+      if (!isValid) setAccountId(accounts[0]!.id)
     } else if (accounts && accounts.length === 0) {
       toast('Link an account to continue', {
         action: {

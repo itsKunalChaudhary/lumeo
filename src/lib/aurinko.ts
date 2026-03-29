@@ -6,6 +6,23 @@ import { getSubscriptionStatus } from './stripe-actions';
 import { db } from '@/server/db';
 import { FREE_ACCOUNTS_PER_USER, PRO_ACCOUNTS_PER_USER } from '@/app/constants';
 
+// Use this specifically for reconnecting an existing account (skips the account-count limit,
+// since the OAuth callback does an upsert — it won't create a duplicate account).
+export const getAurinkoReconnectUrl = async (serviceType: 'Google' | 'Office365') => {
+    const { userId } = await auth()
+    if (!userId) throw new Error('User not found')
+
+    const params = new URLSearchParams({
+        clientId: process.env.AURINKO_CLIENT_ID as string,
+        serviceType,
+        scopes: 'Mail.Read Mail.ReadWrite Mail.Send Mail.Drafts Mail.All',
+        responseType: 'code',
+        returnUrl: `${process.env.NEXT_PUBLIC_URL}/api/aurinko/callback`,
+    });
+
+    return `https://api.aurinko.io/v1/auth/authorize?${params.toString()}`;
+};
+
 export const getAurinkoAuthorizationUrl = async (serviceType: 'Google' | 'Office365') => {
     const { userId } = await auth()
     if (!userId) throw new Error('User not found')

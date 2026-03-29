@@ -27,7 +27,7 @@ export default function MailPage() {
           className="block dark:hidden"
         />
       </div>
-      <div className="flex-col hidden md:flex h-screen overflow-scroll">
+      <div className="flex-col hidden md:flex h-screen overflow-hidden">
         <Mail
           defaultLayout={defaultLayout}
           defaultCollapsed={defaultCollapsed}

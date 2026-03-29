@@ -113,11 +113,12 @@ export function Mail({
             order={1}
             defaultSize={threadListDefault}
             minSize={20}
+            className="h-full overflow-hidden"
           >
             <Tabs defaultValue="inbox" value={done ? 'done' : 'inbox'} onValueChange={tab => {
               setDone(tab === 'done')
-            }}>
-              <div className="flex items-center px-4 py-2">
+            }} className="h-full flex flex-col">
+              <div className="flex items-center px-4 py-2 flex-shrink-0">
                 <h1 className="text-xl font-bold">Inbox</h1>
                 <TabsList className="ml-auto">
                   <TabsTrigger value="inbox" className="text-zinc-600 dark:text-zinc-200">
@@ -130,10 +131,10 @@ export function Mail({
               </div>
               <Separator />
               <SearchBar />
-              <TabsContent value="inbox" className="m-0">
+              <TabsContent value="inbox" className="flex-1 overflow-y-auto m-0">
                 <ThreadList />
               </TabsContent>
-              <TabsContent value="done" className="m-0">
+              <TabsContent value="done" className="flex-1 overflow-y-auto m-0">
                 <ThreadList />
               </TabsContent>
             </Tabs>

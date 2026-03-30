@@ -22,6 +22,7 @@ import { turndown } from '@/lib/turndown'
 
 type Props = {
     onGenerate: (value: string) => void
+    onGenerateStart?: () => void
     isComposing?: boolean
 }
 
@@ -38,6 +39,8 @@ const AIComposeButton = (props: Props) => {
         }
 
         const { output } = await generateEmail(context + `\n\nMy name is: ${account?.name}`, prompt)
+
+        props.onGenerateStart?.()
 
         for await (const delta of readStreamableValue(output)) {
             if (delta) {

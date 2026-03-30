@@ -9,14 +9,11 @@ import { Button } from "@/components/ui/button";
 
 import { generate } from './action';
 import { readStreamableValue } from 'ai/rsc';
-import { useThread } from "../../use-thread";
-import useThreads from "../../use-threads";
 import { api } from "@/trpc/react";
 import { Input } from "@/components/ui/input";
 import TagInput from "./tag-input";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { useLocalStorage } from "usehooks-ts";
-import { Bot } from "lucide-react";
 import AIComposeButton from "./ai-compose-button";
 
 type EmailEditorProps = {
@@ -48,29 +45,26 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
 
     const [expanded, setExpanded] = React.useState(defaultToolbarExpand ?? false);
 
-    const [generation, setGeneration] = React.useState('');
+    const editorRef = React.useRef<ReturnType<typeof useEditor>>(null);
 
     const aiGenerate = async (prompt: string) => {
         const { output } = await generate(prompt)
-
         for await (const delta of readStreamableValue(output)) {
             if (delta) {
-                setGeneration(delta);
+                editorRef.current?.commands.insertContent(delta);
             }
         }
-
     }
-
-
 
     const isMac = typeof window !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
     const customText = Text.extend({
         addKeyboardShortcuts() {
             return {
-                // "Mod" maps to Cmd on Mac and Ctrl on Windows/Linux
                 "Mod-j": () => {
-                    aiGenerate(this.editor.getText());
+                    const text = this.editor.getText();
+                    this.editor.commands.clearContent();
+                    void aiGenerate(text);
                     return true;
                 },
             };
@@ -94,6 +88,11 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
         }
     });
 
+    // Keep ref in sync so aiGenerate closure always has the latest editor instance
+    React.useEffect(() => {
+        (editorRef as React.MutableRefObject<typeof editor>).current = editor;
+    }, [editor]);
+
     React.useEffect(() => {
         if (typeof window === 'undefined') return;
 
@@ -111,11 +110,6 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
             window.removeEventListener("keydown", handleKeyDown);
         };
     }, [editor]);
-
-    React.useEffect(() => {
-        if (!generation || !editor) return;
-        editor.commands.insertContent(generation)
-    }, [generation, editor]);
 
     const [value, setValue] = React.useState(defaultBody ?? '');
 
@@ -147,7 +141,8 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
                     </div>
                     <AIComposeButton
                         isComposing={defaultToolbarExpand}
-                        onGenerate={setGeneration}
+                        onGenerateStart={() => editor?.commands.clearContent()}
+                        onGenerate={(delta) => editor?.commands.insertContent(delta)}
                     />
                 </div>
             </div>

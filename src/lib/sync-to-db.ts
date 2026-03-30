@@ -11,7 +11,7 @@ async function syncEmailsToDatabase(emails: EmailMessage[], accountId: string) {
     const limit = pLimit(10); // Process up to 10 emails concurrently
 
     const oramaClient = new OramaManager(accountId)
-    oramaClient.initialize()
+    await oramaClient.initialize()
 
     try {
 

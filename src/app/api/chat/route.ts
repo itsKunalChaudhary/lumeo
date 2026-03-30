@@ -45,27 +45,55 @@ export async function POST(req: Request) {
 
         const lastMessage = messages[messages.length - 1]
 
-
         const context = await oramaManager.vectorSearch({ prompt: lastMessage.content })
         console.log(context.hits.length + ' hits found')
-        // console.log(context.hits.map(hit => hit.document))
+
+        // Fallback: if Orama index is empty (e.g. built before API key was valid),
+        // pull recent emails directly from the DB so the AI always has context.
+        let emailContext = context.hits.map((hit) => JSON.stringify(hit.document)).join('\n')
+        if (context.hits.length === 0) {
+            const emails = await db.email.findMany({
+                where: { thread: { accountId } },
+                orderBy: { sentAt: 'desc' },
+                take: 15,
+                select: {
+                    subject: true,
+                    bodySnippet: true,
+                    sentAt: true,
+                    from: { select: { name: true, address: true } },
+                    to: { select: { name: true, address: true } },
+                    thread: { select: { id: true } },
+                }
+            })
+            emailContext = emails.map(e =>
+                `From: ${e.from?.name} <${e.from?.address}>\nTo: ${e.to.map(t => t.address).join(', ')}\nSubject: ${e.subject}\nSnippet: ${e.bodySnippet}\nSentAt: ${e.sentAt}`
+            ).join('\n\n')
+            console.log(`Orama empty — fell back to ${emails.length} emails from DB`)
+        }
 
         const prompt = {
             role: "system",
-            content: `You are an AI email assistant embedded in an email client app. Your purpose is to help the user compose emails by answering questions, providing suggestions, and offering relevant information based on the context of their previous emails.
-            THE TIME NOW IS ${new Date().toLocaleString()}
-      
+            content: `You are an AI email assistant embedded in an email client app. Your purpose is to help the user with their emails by:
+      1. Answering questions about emails in the provided context
+      2. Summarising email threads when asked
+      3. Drafting email replies or new emails when asked — format drafts like this:
+         ---DRAFT---
+         Subject: <subject>
+         <email body>
+         ---END DRAFT---
+
+      THE TIME NOW IS ${new Date().toLocaleString()}
+
       START CONTEXT BLOCK
-      ${context.hits.map((hit) => JSON.stringify(hit.document)).join('\n')}
+      ${emailContext}
       END OF CONTEXT BLOCK
-      
-      When responding, please keep in mind:
-      - Be helpful, clever, and articulate.
+
+      When responding:
+      - Be helpful, concise, and articulate.
       - Rely on the provided email context to inform your responses.
-      - If the context does not contain enough information to answer a question, politely say you don't have enough information.
-      - Avoid apologizing for previous responses. Instead, indicate that you have updated your knowledge based on new information.
-      - Do not invent or speculate about anything that is not directly supported by the email context.
-      - Keep your responses concise and relevant to the user's questions or the email being composed.`
+      - If the context does not contain enough information, say so politely.
+      - Do not invent details not supported by the email context.
+      - When drafting emails, match the tone and style of the user's existing emails.`
         };
 
 

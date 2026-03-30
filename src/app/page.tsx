@@ -151,7 +151,7 @@ const LandingPage = async () => {
         {/* ── Navbar ── */}
         <nav className="w-full flex items-center justify-between px-8 py-4 border-b border-zinc-800/60 backdrop-blur-sm bg-black/20 sticky top-0 z-50">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Lumeo logo" width={28} height={28} className="rounded-md" />
+            <Image src="/logo.png" alt="Lumeo logo" width={28} height={28} className="rounded-md invert" />
             <span className="text-white font-bold text-lg tracking-tight">Lumeo</span>
           </div>
           <div className="flex items-center gap-4">

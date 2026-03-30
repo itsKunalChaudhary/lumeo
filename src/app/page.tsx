@@ -150,7 +150,10 @@ const LandingPage = async () => {
 
         {/* ── Navbar ── */}
         <nav className="w-full flex items-center justify-between px-8 py-4 border-b border-zinc-800/60 backdrop-blur-sm bg-black/20 sticky top-0 z-50">
-          <span className="text-white font-bold text-lg tracking-tight">Lumeo</span>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="Lumeo logo" width={28} height={28} className="rounded-md" />
+            <span className="text-white font-bold text-lg tracking-tight">Lumeo</span>
+          </div>
           <div className="flex items-center gap-4">
             <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white transition-colors">Sign In</Link>
             <Link href="/sign-up">

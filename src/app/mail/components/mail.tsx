@@ -34,13 +34,12 @@ import { useThread } from "@/app/mail/use-thread"
 interface MailProps {
   defaultLayout: number[] | undefined
   defaultCollapsed?: boolean
-  navCollapsedSize: number
+  navCollapsedSize?: number
 }
 
 export function Mail({
   defaultLayout = [20, 32, 48],
   defaultCollapsed = false,
-  navCollapsedSize,
 }: MailProps) {
   const [done, setDone] = useLocalStorage('normalhuman-done', false)
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed)
@@ -69,8 +68,10 @@ export function Mail({
           </div>
           <Separator />
           <SideBar isCollapsed={isCollapsed} />
-          <div className="flex-1" />
-          <AskAI isCollapsed={isCollapsed} />
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0" />
+            <AskAI isCollapsed={isCollapsed} />
+          </div>
           <Separator />
           <div className={cn(
             "p-2 flex items-center gap-1",

@@ -48,8 +48,8 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
 
             <PremiumBanner />
             <div className="h-4"></div>
-            <motion.div className="flex flex-1 flex-col items-end justify-end pb-4 border p-4 rounded-lg bg-gray-100 shadow-inner dark:bg-gray-900">
-                <div className="max-h-[50vh] overflow-y-scroll w-full flex flex-col gap-2" id='message-container'>
+            <motion.div className="flex flex-col items-end justify-end pb-4 border p-4 rounded-lg bg-gray-100 shadow-inner dark:bg-gray-900 overflow-hidden">
+                <div className="max-h-[200px] overflow-y-auto w-full flex flex-col gap-2" id='message-container'>
                     <AnimatePresence mode="wait">
                         {messages.map((message) => (
                             <motion.div

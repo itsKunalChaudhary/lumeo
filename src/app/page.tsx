@@ -23,14 +23,13 @@ const features = [
         <line x1="29" y1="28.5" x2="23" y2="23" stroke="url(#g1)" strokeWidth="1.2" strokeLinecap="round"/>
         <defs>
           <linearGradient id="g1" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#60a5fa"/>
-            <stop offset="1" stopColor="#a78bfa"/>
+            <stop stopColor="#60a5fa"/><stop offset="1" stopColor="#a78bfa"/>
           </linearGradient>
         </defs>
       </svg>
     ),
     accent: "from-blue-500/10 to-violet-500/10",
-    border: "hover:border-blue-500/40",
+    border: "hover:border-blue-400/50",
   },
   {
     title: "Semantic Search",
@@ -43,14 +42,13 @@ const features = [
         <line x1="18" y1="14" x2="18" y2="22" stroke="url(#g2)" strokeWidth="1.2" strokeLinecap="round"/>
         <defs>
           <linearGradient id="g2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#34d399"/>
-            <stop offset="1" stopColor="#60a5fa"/>
+            <stop stopColor="#34d399"/><stop offset="1" stopColor="#60a5fa"/>
           </linearGradient>
         </defs>
       </svg>
     ),
     accent: "from-emerald-500/10 to-blue-500/10",
-    border: "hover:border-emerald-500/40",
+    border: "hover:border-emerald-400/50",
   },
   {
     title: "AI Compose & Reply",
@@ -64,14 +62,13 @@ const features = [
         <path d="M28 6 L34 12 L22 24 L16 26 L18 20 Z" stroke="url(#g3)" strokeWidth="1.3" strokeLinejoin="round"/>
         <defs>
           <linearGradient id="g3" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#f472b6"/>
-            <stop offset="1" stopColor="#a78bfa"/>
+            <stop stopColor="#f472b6"/><stop offset="1" stopColor="#a78bfa"/>
           </linearGradient>
         </defs>
       </svg>
     ),
     accent: "from-pink-500/10 to-violet-500/10",
-    border: "hover:border-pink-500/40",
+    border: "hover:border-pink-400/50",
   },
   {
     title: "Keyboard-first UX",
@@ -85,14 +82,13 @@ const features = [
         <rect x="10" y="23" width="17" height="4" rx="1" stroke="url(#g4)" strokeWidth="1.1"/>
         <defs>
           <linearGradient id="g4" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#fb923c"/>
-            <stop offset="1" stopColor="#f59e0b"/>
+            <stop stopColor="#fb923c"/><stop offset="1" stopColor="#f59e0b"/>
           </linearGradient>
         </defs>
       </svg>
     ),
     accent: "from-orange-500/10 to-amber-500/10",
-    border: "hover:border-orange-500/40",
+    border: "hover:border-orange-400/50",
   },
   {
     title: "Real-time Sync",
@@ -105,14 +101,13 @@ const features = [
         <polyline points="11,32 8,26 14,26" stroke="url(#g5)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
         <defs>
           <linearGradient id="g5" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#22d3ee"/>
-            <stop offset="1" stopColor="#60a5fa"/>
+            <stop stopColor="#22d3ee"/><stop offset="1" stopColor="#60a5fa"/>
           </linearGradient>
         </defs>
       </svg>
     ),
     accent: "from-cyan-500/10 to-blue-500/10",
-    border: "hover:border-cyan-500/40",
+    border: "hover:border-cyan-400/50",
   },
   {
     title: "Smart Archiving",
@@ -125,22 +120,20 @@ const features = [
         <line x1="20" y1="18" x2="20" y2="26" stroke="url(#g6)" strokeWidth="1.4" strokeLinecap="round"/>
         <defs>
           <linearGradient id="g6" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#a78bfa"/>
-            <stop offset="1" stopColor="#ec4899"/>
+            <stop stopColor="#a78bfa"/><stop offset="1" stopColor="#ec4899"/>
           </linearGradient>
         </defs>
       </svg>
     ),
     accent: "from-violet-500/10 to-pink-500/10",
-    border: "hover:border-violet-500/40",
+    border: "hover:border-violet-400/50",
   },
 ]
 
 const LandingPage = async () => {
   const { userId } = auth()
-  if (userId) {
-    return redirect('/mail')
-  }
+  if (userId) return redirect('/mail')
+
   return (
     <>
       {/* Grid background */}
@@ -149,13 +142,13 @@ const LandingPage = async () => {
       <div className="min-h-screen flex flex-col items-center relative z-[10]">
 
         {/* ── Navbar ── */}
-        <nav className="w-full flex items-center justify-between px-8 py-4 border-b border-zinc-800/60 backdrop-blur-sm bg-black/20 sticky top-0 z-50">
+        <nav className="w-full flex items-center justify-between px-8 py-4 border-b border-gray-200/60 dark:border-zinc-800/60 backdrop-blur-sm bg-white/80 dark:bg-black/20 sticky top-0 z-50">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Lumeo logo" width={28} height={28} className="rounded-md invert" />
-            <span className="text-white font-bold text-lg tracking-tight">Lumeo</span>
+            <Image src="/logo.png" alt="Lumeo logo" width={28} height={28} className="rounded-md dark:invert" />
+            <span className="text-gray-900 dark:text-white font-bold text-lg tracking-tight">Lumeo</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white transition-colors">Sign In</Link>
+            <Link href="/sign-in" className="text-sm text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-white transition-colors">Sign In</Link>
             <Link href="/sign-up">
               <Button size="sm">Get Started</Button>
             </Link>
@@ -165,15 +158,15 @@ const LandingPage = async () => {
 
         {/* ── Hero ── */}
         <section className="flex flex-col items-center pt-32 pb-16 px-4 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-700 bg-zinc-900/60 text-xs text-zinc-400 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-gray-300 dark:border-zinc-700 bg-gray-100/80 dark:bg-zinc-900/60 text-xs text-gray-500 dark:text-zinc-400 mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             AI-powered · Real-time sync · Privacy first
           </div>
-          <h1 className="bg-gradient-to-r from-gray-300 via-gray-100 to-gray-400 font-bold text-6xl md:text-7xl inline-block text-transparent bg-clip-text leading-tight max-w-4xl">
+          <h1 className="bg-gradient-to-r from-gray-800 via-gray-600 to-gray-900 dark:from-gray-300 dark:via-gray-100 dark:to-gray-400 font-bold text-6xl md:text-7xl inline-block text-transparent bg-clip-text leading-tight max-w-4xl">
             The minimalistic,<br />AI-powered email client.
           </h1>
           <div className="h-6" />
-          <p className="text-lg text-zinc-400 max-w-xl leading-relaxed">
+          <p className="text-lg text-gray-600 dark:text-zinc-400 max-w-xl leading-relaxed">
             Lumeo is a minimalistic, AI-powered email client that empowers you to manage your email with ease.
           </p>
           <div className="h-8" />
@@ -190,8 +183,8 @@ const LandingPage = async () => {
         {/* ── Features ── */}
         <section className="w-full max-w-6xl mx-auto px-6 py-16">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Experience the power of</h2>
-            <p className="text-zinc-400 max-w-2xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">Experience the power of</h2>
+            <p className="text-gray-500 dark:text-zinc-400 max-w-2xl mx-auto">
               Everything you need to reach inbox zero — and stay there. Built for people who take their email seriously.
             </p>
           </div>
@@ -200,16 +193,13 @@ const LandingPage = async () => {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className={`group relative p-6 rounded-2xl border border-zinc-800 bg-zinc-900/40 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/40 ${feature.border}`}
+                className={`group relative p-6 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm dark:shadow-none transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-black/40 ${feature.border}`}
               >
-                {/* Icon */}
-                <div className="mb-5 w-12 h-12 flex items-center justify-center rounded-xl bg-zinc-800/60 group-hover:bg-zinc-800 transition-colors">
+                <div className="mb-5 w-12 h-12 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-zinc-800/60 group-hover:bg-gray-200 dark:group-hover:bg-zinc-800 transition-colors">
                   {feature.icon}
                 </div>
-                {/* Text */}
-                <h3 className="text-base font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
-                {/* Hover gradient overlay */}
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-500 dark:text-zinc-400 leading-relaxed">{feature.description}</p>
                 <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
               </div>
             ))}
@@ -218,8 +208,7 @@ const LandingPage = async () => {
 
         {/* ── Demo screenshot ── */}
         <section className="w-full max-w-5xl mx-auto px-6 py-8">
-          <div className="relative rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl shadow-black/60">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10" />
+          <div className="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-xl dark:shadow-2xl dark:shadow-black/60">
             <Image
               src="/demo.png"
               alt="Lumeo app screenshot"
@@ -231,13 +220,13 @@ const LandingPage = async () => {
         </section>
 
         {/* ── Footer ── */}
-        <footer className="w-full border-t border-zinc-800/60 mt-16 py-8 px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-500">
+        <footer className="w-full border-t border-gray-200/60 dark:border-zinc-800/60 mt-16 py-8 px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 dark:text-zinc-500">
           <span>© {new Date().getFullYear()} Lumeo. All rights reserved.</span>
           <div className="flex items-center gap-6">
-            <Link href="/sign-in" className="hover:text-zinc-300 transition-colors">Sign In</Link>
-            <Link href="/sign-up" className="hover:text-zinc-300 transition-colors">Sign Up</Link>
-            <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
-            <Link href="/terms-of-service" className="hover:text-zinc-300 transition-colors">Terms</Link>
+            <Link href="/sign-in" className="hover:text-gray-900 dark:hover:text-zinc-300 transition-colors">Sign In</Link>
+            <Link href="/sign-up" className="hover:text-gray-900 dark:hover:text-zinc-300 transition-colors">Sign Up</Link>
+            <Link href="/privacy" className="hover:text-gray-900 dark:hover:text-zinc-300 transition-colors">Privacy</Link>
+            <Link href="/terms-of-service" className="hover:text-gray-900 dark:hover:text-zinc-300 transition-colors">Terms</Link>
           </div>
         </footer>
 

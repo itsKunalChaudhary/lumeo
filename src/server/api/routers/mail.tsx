@@ -243,22 +243,23 @@ export const mailRouter = createTRPCRouter({
             select: { id: true }
         })).map(t => t.id)
 
-        const emailIds = (await ctx.db.email.findMany({
-            where: { threadId: { in: threadIds } },
-            select: { id: true }
-        })).map(e => e.id)
+        if (threadIds.length > 0) {
+            const emailIds = (await ctx.db.email.findMany({
+                where: { threadId: { in: threadIds } },
+                select: { id: true }
+            })).map(e => e.id)
 
-        await ctx.db.emailAttachment.deleteMany({ where: { emailId: { in: emailIds } } })
+            if (emailIds.length > 0) {
+                // Attachments must go first (FK: emailId → Email)
+                await ctx.db.emailAttachment.deleteMany({ where: { emailId: { in: emailIds } } })
+                // Prisma implicit M2M junction tables (to/cc/bcc/replyTo) use ON DELETE CASCADE,
+                // so deleting emails automatically cleans up junction rows — no for-loop needed.
+                await ctx.db.email.deleteMany({ where: { threadId: { in: threadIds } } })
+            }
 
-        for (const emailId of emailIds) {
-            await ctx.db.email.update({
-                where: { id: emailId },
-                data: { to: { set: [] }, cc: { set: [] }, bcc: { set: [] }, replyTo: { set: [] } }
-            })
+            await ctx.db.thread.deleteMany({ where: { accountId: account.id } })
         }
 
-        await ctx.db.email.deleteMany({ where: { threadId: { in: threadIds } } })
-        await ctx.db.thread.deleteMany({ where: { accountId: account.id } })
         await ctx.db.emailAddress.deleteMany({ where: { accountId: account.id } })
         await ctx.db.account.delete({ where: { id: account.id } })
     }),

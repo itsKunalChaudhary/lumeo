@@ -11,7 +11,6 @@ import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Lumeo",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 export default function RootLayout({

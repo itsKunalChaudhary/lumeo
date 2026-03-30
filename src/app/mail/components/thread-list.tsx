@@ -2,7 +2,7 @@ import React, { type ComponentProps } from "react"
 import DOMPurify from 'dompurify';
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from "date-fns"
-import { Archive, ArchiveRestore } from "lucide-react"
+import { Archive, ArchiveRestore, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -31,6 +31,12 @@ export function ThreadList() {
   })
   const unarchive = api.mail.setUndone.useMutation({
     onSuccess: () => utils.mail.getThreads.invalidate()
+  })
+  const trash = api.mail.setTrash.useMutation({
+    onSuccess: () => {
+      void utils.mail.getThreads.invalidate()
+      void utils.mail.getNumThreads.invalidate()
+    }
   })
 
   const [threadId, setThreadId] = useThread();
@@ -121,7 +127,7 @@ export function ThreadList() {
                     ))}
                   </div>
                 ) : null}
-                <div className="flex justify-end w-full opacity-0 group-hover:opacity-100 transition-opacity -mb-1">
+                <div className="flex justify-end gap-1 w-full opacity-0 group-hover:opacity-100 transition-opacity -mb-1">
                   {!done ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -157,6 +163,22 @@ export function ThreadList() {
                       <TooltipContent>Unarchive</TooltipContent>
                     </Tooltip>
                   )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          trash.mutate({ threadId: item.id, accountId })
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Move to trash</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             ))}

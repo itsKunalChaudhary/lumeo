@@ -94,6 +94,7 @@ model Thread {
     inboxStatus Boolean @default(true)
     draftStatus Boolean @default(false)
     sentStatus  Boolean @default(false)
+    trashStatus Boolean @default(false)
 
     emails Email[]
 
@@ -102,6 +103,7 @@ model Thread {
     @@index([inboxStatus])
     @@index([draftStatus])
     @@index([sentStatus])
+    @@index([trashStatus])
     @@index([lastMessageDate])
 }
 

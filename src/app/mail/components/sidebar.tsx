@@ -40,6 +40,11 @@ const SideBar = ({ isCollapsed }: Props) => {
         tab: "sent"
     }, { enabled: !!accountId && !!tab, refetchInterval })
 
+    const { data: trashThreads } = api.mail.getNumThreads.useQuery({
+        accountId,
+        tab: "trash"
+    }, { enabled: !!accountId && !!tab, refetchInterval })
+
     return (
         <>
             <Nav
@@ -62,6 +67,12 @@ const SideBar = ({ isCollapsed }: Props) => {
                         label: sentThreads?.toString() || "0",
                         icon: Send,
                         variant: tab === "sent" ? "default" : "ghost",
+                    },
+                    {
+                        title: "Trash",
+                        label: trashThreads?.toString() || "0",
+                        icon: Trash2,
+                        variant: tab === "trash" ? "default" : "ghost",
                     },
                 ]}
             />

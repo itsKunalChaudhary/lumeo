@@ -33,8 +33,11 @@ const useThreads = () => {
         })
     }, [])
 
+    const isSyncing = React.useRef(false)
+
     const { mutate: syncEmails } = api.mail.syncEmails.useMutation({
         onError: (error) => {
+            isSyncing.current = false
             if (error.data?.code === 'UNAUTHORIZED') {
                 showReconnectToast()
             }
@@ -42,10 +45,13 @@ const useThreads = () => {
     })
 
     React.useEffect(() => {
-        if (!accountId) return
-        // Sync on mount and whenever the account changes, then refetch from DB
+        if (!accountId || isSyncing.current) return
+        isSyncing.current = true
         syncEmails({ accountId }, {
-            onSuccess: () => { void refetch() }
+            onSuccess: () => {
+                isSyncing.current = false
+                void refetch()
+            }
         })
     }, [accountId])
 
@@ -64,9 +70,13 @@ const useThreads = () => {
 
     // Manual refresh: re-syncs from Aurinko then immediately refetches threads
     const syncAndRefetch = React.useCallback(() => {
-        if (!accountId) return
+        if (!accountId || isSyncing.current) return
+        isSyncing.current = true
         syncEmails({ accountId }, {
-            onSuccess: () => { void refetch() }
+            onSuccess: () => {
+                isSyncing.current = false
+                void refetch()
+            }
         })
     }, [accountId, syncEmails, refetch])
 

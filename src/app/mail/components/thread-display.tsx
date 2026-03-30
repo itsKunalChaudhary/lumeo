@@ -65,6 +65,15 @@ export function ThreadDisplay() {
   React.useEffect(() => { setIsReplyOpen(false) }, [threadId])
 
   const [accountId] = useLocalStorage('accountId', '')
+  const utils = api.useUtils()
+  const trashThread = api.mail.setTrash.useMutation({
+    onSuccess: () => {
+      void utils.mail.getThreads.invalidate()
+      void utils.mail.getNumThreads.invalidate()
+      setThreadId(null)
+    }
+  })
+
   const { data: foundThread } = api.mail.getThreadById.useQuery({
     accountId: accountId,
     threadId: threadId ?? ''
@@ -95,7 +104,12 @@ export function ThreadDisplay() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!thread}>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={!thread}
+                onClick={() => thread && trashThread.mutate({ threadId: thread.id, accountId })}
+              >
                 <Trash2 className="w-4 h-4" />
                 <span className="sr-only">Move to trash</span>
               </Button>

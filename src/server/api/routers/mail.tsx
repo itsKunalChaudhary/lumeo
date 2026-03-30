@@ -26,17 +26,25 @@ export const authoriseAccountAccess = async (accountId: string, userId: string) 
 
 const inboxFilter = (accountId: string): Prisma.ThreadWhereInput => ({
     accountId,
-    inboxStatus: true
+    inboxStatus: true,
+    trashStatus: false,
 })
 
 const sentFilter = (accountId: string): Prisma.ThreadWhereInput => ({
     accountId,
-    sentStatus: true
+    sentStatus: true,
+    trashStatus: false,
 })
 
 const draftFilter = (accountId: string): Prisma.ThreadWhereInput => ({
     accountId,
-    draftStatus: true
+    draftStatus: true,
+    trashStatus: false,
+})
+
+const trashFilter = (accountId: string): Prisma.ThreadWhereInput => ({
+    accountId,
+    trashStatus: true,
 })
 
 export const mailRouter = createTRPCRouter({
@@ -61,6 +69,8 @@ export const mailRouter = createTRPCRouter({
             filter = sentFilter(account.id)
         } else if (input.tab === "drafts") {
             filter = draftFilter(account.id)
+        } else if (input.tab === "trash") {
+            filter = trashFilter(account.id)
         }
         return await ctx.db.thread.count({
             where: filter
@@ -80,16 +90,15 @@ export const mailRouter = createTRPCRouter({
             filter = sentFilter(account.id)
         } else if (input.tab === "drafts") {
             filter = draftFilter(account.id)
+        } else if (input.tab === "trash") {
+            filter = trashFilter(account.id)
         }
 
-        filter.done = {
-            equals: input.done
-        }
-
-        const fiftyDaysAgo = new Date()
-        fiftyDaysAgo.setDate(fiftyDaysAgo.getDate() - 50)
-        filter.lastMessageDate = {
-            gte: fiftyDaysAgo
+        if (input.tab !== "trash") {
+            filter.done = { equals: input.done }
+            const fiftyDaysAgo = new Date()
+            fiftyDaysAgo.setDate(fiftyDaysAgo.getDate() - 50)
+            filter.lastMessageDate = { gte: fiftyDaysAgo }
         }
 
         const threads = await ctx.db.thread.findMany({
@@ -318,6 +327,21 @@ export const mailRouter = createTRPCRouter({
                 }
             })
         }
+    }),
+    setTrash: protectedProcedure.input(z.object({
+        threadId: z.string(),
+        accountId: z.string()
+    })).mutation(async ({ ctx, input }) => {
+        const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
+        await ctx.db.thread.update({
+            where: { id: input.threadId },
+            data: {
+                trashStatus: true,
+                inboxStatus: false,
+                sentStatus: false,
+                draftStatus: false,
+            }
+        })
     }),
     getEmailDetails: protectedProcedure.input(z.object({
         emailId: z.string(),

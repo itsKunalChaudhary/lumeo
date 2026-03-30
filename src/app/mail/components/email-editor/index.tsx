@@ -147,7 +147,7 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
                 </div>
             </div>
 
-            <div className="prose dark:prose-invert w-full px-4 relative">
+            <div className="prose dark:prose-invert w-full px-4 relative overflow-y-auto min-h-[80px] max-h-[200px]">
                 <EditorContent value={value} editor={editor} placeholder="Write your email here..." />
                 {value.trim() && (
                     <p className="not-prose text-xs text-muted-foreground/50 mt-1 select-none">

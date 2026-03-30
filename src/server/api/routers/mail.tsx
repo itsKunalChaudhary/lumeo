@@ -233,6 +233,35 @@ export const mailRouter = createTRPCRouter({
             throw error
         }
     }),
+    deleteAccount: protectedProcedure.input(z.object({
+        accountId: z.string()
+    })).mutation(async ({ ctx, input }) => {
+        const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
+
+        const threadIds = (await ctx.db.thread.findMany({
+            where: { accountId: account.id },
+            select: { id: true }
+        })).map(t => t.id)
+
+        const emailIds = (await ctx.db.email.findMany({
+            where: { threadId: { in: threadIds } },
+            select: { id: true }
+        })).map(e => e.id)
+
+        await ctx.db.emailAttachment.deleteMany({ where: { emailId: { in: emailIds } } })
+
+        for (const emailId of emailIds) {
+            await ctx.db.email.update({
+                where: { id: emailId },
+                data: { to: { set: [] }, cc: { set: [] }, bcc: { set: [] }, replyTo: { set: [] } }
+            })
+        }
+
+        await ctx.db.email.deleteMany({ where: { threadId: { in: threadIds } } })
+        await ctx.db.thread.deleteMany({ where: { accountId: account.id } })
+        await ctx.db.emailAddress.deleteMany({ where: { accountId: account.id } })
+        await ctx.db.account.delete({ where: { id: account.id } })
+    }),
     resetAccount: protectedProcedure.input(z.object({
         accountId: z.string()
     })).mutation(async ({ ctx, input }) => {

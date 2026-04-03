@@ -57,6 +57,15 @@ export const mailRouter = createTRPCRouter({
             }
         })
     }),
+    getSyncStatus: protectedProcedure.input(z.object({
+        accountId: z.string(),
+    })).query(async ({ ctx, input }) => {
+        const account = await ctx.db.account.findFirst({
+            where: { id: input.accountId, userId: ctx.auth.userId },
+            select: { nextDeltaToken: true }
+        })
+        return { isSynced: !!account?.nextDeltaToken }
+    }),
     getNumThreads: protectedProcedure.input(z.object({
         accountId: z.string(),
         tab: z.string()
@@ -96,9 +105,6 @@ export const mailRouter = createTRPCRouter({
 
         if (input.tab !== "trash") {
             filter.done = { equals: input.done }
-            const fiftyDaysAgo = new Date()
-            fiftyDaysAgo.setDate(fiftyDaysAgo.getDate() - 50)
-            filter.lastMessageDate = { gte: fiftyDaysAgo }
         }
 
         const threads = await ctx.db.thread.findMany({
@@ -120,7 +126,6 @@ export const mailRouter = createTRPCRouter({
                     }
                 }
             },
-            take: 50,
             orderBy: {
                 lastMessageDate: "desc"
             }

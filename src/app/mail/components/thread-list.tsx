@@ -22,7 +22,7 @@ import { isSearchingAtom } from "./search-bar"
 import { format } from "date-fns";
 
 export function ThreadList() {
-  const { threads, isFetching, accountId } = useThreads();
+  const { threads, isFetching, isSynced, accountId } = useThreads();
   const [done] = useLocalStorage('normalhuman-done', false)
   const utils = api.useUtils()
 
@@ -51,6 +51,15 @@ export function ThreadList() {
     acc[date].push(thread);
     return acc;
   }, {} as Record<string, typeof threads>);
+
+  if (!isSynced) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
+        <p className="text-sm">Loading your emails...</p>
+      </div>
+    )
+  }
 
   return (
     <div>

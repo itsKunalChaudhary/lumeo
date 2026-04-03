@@ -17,8 +17,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${GeistSans.variable}`}>
+    <ClerkProvider signInFallbackRedirectUrl="/mail" signUpFallbackRedirectUrl="/mail">
+      <html lang="en" suppressHydrationWarning className={`${GeistSans.variable}`}>
         <body>
           <ThemeProvider attribute='class' defaultTheme='system' enableSystem disableTransitionOnChange>
             <TRPCReactProvider>

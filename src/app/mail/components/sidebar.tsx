@@ -24,7 +24,7 @@ const SideBar = ({ isCollapsed }: Props) => {
     const [tab] = useLocalStorage("normalhuman-tab", "inbox")
     const [accountId] = useLocalStorage("accountId", "")
 
-    const refetchInterval = 5000
+    const refetchInterval = 60000
     const { data: inboxThreads } = api.mail.getNumThreads.useQuery({
         accountId,
         tab: "inbox"

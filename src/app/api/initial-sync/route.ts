@@ -19,6 +19,12 @@ export const POST = async (req: NextRequest) => {
     })
     if (!dbAccount) return NextResponse.json({ error: "ACCOUNT_NOT_FOUND" }, { status: 404 });
 
+    // Reset delta token so getSyncStatus shows loading spinner during re-sync
+    await db.account.update({
+        where: { id: accountId },
+        data: { nextDeltaToken: null }
+    })
+
     const account = new Account(dbAccount.token)
     try {
         await account.createSubscription()

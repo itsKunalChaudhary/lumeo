@@ -18,6 +18,19 @@ export const GET = async (req: NextRequest) => {
     if (!token) return NextResponse.json({ error: "Failed to fetch token" }, { status: 400 });
     const accountDetails = await getAccountDetails(token.accessToken)
 
+    // Ensure the User record exists before creating Account (Clerk webhooks don't
+    // fire in local dev, so we upsert here as a fallback).
+    await db.user.upsert({
+        where: { id: userId },
+        create: {
+            id: userId,
+            emailAddress: accountDetails.email,
+            firstName: accountDetails.name?.split(' ')[0] ?? '',
+            lastName: accountDetails.name?.split(' ').slice(1).join(' ') ?? '',
+        },
+        update: {},
+    })
+
     // Aurinko returns a different accountId on every OAuth flow for the same email,
     // so we cannot upsert by Aurinko's accountId. Instead, look up the existing
     // account by emailAddress + userId to avoid creating duplicate accounts.
@@ -46,8 +59,11 @@ export const GET = async (req: NextRequest) => {
         accountId = token.accountId.toString()
     }
 
+    // Use the request origin so this works in local dev (not NEXT_PUBLIC_URL which
+    // points to production and would send the sync request to Vercel instead).
+    const baseUrl = req.nextUrl.origin
     waitUntil(
-        axios.post(`${process.env.NEXT_PUBLIC_URL}/api/initial-sync`, { accountId, userId }).then((res) => {
+        axios.post(`${baseUrl}/api/initial-sync`, { accountId, userId }).then((res) => {
             console.log(res.data)
         }).catch((err) => {
             console.log(err.response?.data)

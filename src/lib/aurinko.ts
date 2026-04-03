@@ -12,12 +12,13 @@ export const getAurinkoReconnectUrl = async (serviceType: 'Google' | 'Office365'
     const { userId } = await auth()
     if (!userId) throw new Error('User not found')
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_URL
     const params = new URLSearchParams({
         clientId: process.env.AURINKO_CLIENT_ID as string,
         serviceType,
         scopes: 'Mail.Read Mail.ReadWrite Mail.Send Mail.Drafts Mail.All',
         responseType: 'code',
-        returnUrl: `${process.env.NEXT_PUBLIC_URL}/api/aurinko/callback`,
+        returnUrl: `${baseUrl}/api/aurinko/callback`,
     });
 
     return `https://api.aurinko.io/v1/auth/authorize?${params.toString()}`;
@@ -28,12 +29,12 @@ export const getAurinkoAuthorizationUrl = async (serviceType: 'Google' | 'Office
     if (!userId) throw new Error('User not found')
 
     const user = await db.user.findUnique({
-        where: {
-            id: userId
-        }, select: { role: true }
+        where: { id: userId },
+        select: { role: true }
     })
-
-    if (!user) throw new Error('User not found')
+    // User record may not exist in local dev (Clerk webhooks don't fire on localhost).
+    // Default to 'user' role — same as the DB default — so account limits still apply.
+    const userRole = user?.role ?? 'user'
 
     const isSubscribed = await getSubscriptionStatus()
 
@@ -41,7 +42,7 @@ export const getAurinkoAuthorizationUrl = async (serviceType: 'Google' | 'Office
         where: { userId }
     })
 
-    if (user.role === 'user') {
+    if (userRole === 'user') {
         if (isSubscribed) {
             if (accounts >= PRO_ACCOUNTS_PER_USER) {
                 throw new Error('You have reached the maximum number of accounts for your subscription')
@@ -54,12 +55,13 @@ export const getAurinkoAuthorizationUrl = async (serviceType: 'Google' | 'Office
     }
 
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_URL
     const params = new URLSearchParams({
         clientId: process.env.AURINKO_CLIENT_ID as string,
         serviceType,
         scopes: 'Mail.Read Mail.ReadWrite Mail.Send Mail.Drafts Mail.All',
         responseType: 'code',
-        returnUrl: `${process.env.NEXT_PUBLIC_URL}/api/aurinko/callback`,
+        returnUrl: `${baseUrl}/api/aurinko/callback`,
     });
 
     return `https://api.aurinko.io/v1/auth/authorize?${params.toString()}`;

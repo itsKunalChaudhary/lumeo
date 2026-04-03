@@ -45,17 +45,23 @@ export async function POST(req: Request) {
 
         const lastMessage = messages[messages.length - 1]
 
-        const context = await oramaManager.vectorSearch({ prompt: lastMessage.content })
+        const context = await oramaManager.vectorSearch({ prompt: lastMessage.content, numResults: 5 })
         console.log(context.hits.length + ' hits found')
 
         // Fallback: if Orama index is empty (e.g. built before API key was valid),
         // pull recent emails directly from the DB so the AI always has context.
-        let emailContext = context.hits.map((hit) => JSON.stringify(hit.document)).join('\n')
+        let emailContext = context.hits.map((hit) => {
+            const doc = hit.document as Record<string, unknown>
+            // Truncate large fields to keep token count manageable
+            if (typeof doc.body === 'string') doc.body = doc.body.slice(0, 500)
+            if (typeof doc.bodySnippet === 'string') doc.bodySnippet = doc.bodySnippet.slice(0, 300)
+            return JSON.stringify(doc)
+        }).join('\n')
         if (context.hits.length === 0) {
             const emails = await db.email.findMany({
                 where: { thread: { accountId } },
                 orderBy: { sentAt: 'desc' },
-                take: 15,
+                take: 5,
                 select: {
                     subject: true,
                     bodySnippet: true,
@@ -66,7 +72,7 @@ export async function POST(req: Request) {
                 }
             })
             emailContext = emails.map(e =>
-                `From: ${e.from?.name} <${e.from?.address}>\nTo: ${e.to.map(t => t.address).join(', ')}\nSubject: ${e.subject}\nSnippet: ${e.bodySnippet}\nSentAt: ${e.sentAt}`
+                `From: ${e.from?.name} <${e.from?.address}>\nTo: ${e.to.map(t => t.address).join(', ')}\nSubject: ${e.subject}\nSnippet: ${(e.bodySnippet ?? '').slice(0, 300)}\nSentAt: ${e.sentAt}`
             ).join('\n\n')
             console.log(`Orama empty — fell back to ${emails.length} emails from DB`)
         }

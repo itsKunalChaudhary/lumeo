@@ -33,6 +33,14 @@ const useThreads = () => {
         })
     }, [])
 
+    const { data: syncStatus } = api.mail.getSyncStatus.useQuery(
+        { accountId },
+        {
+            enabled: !!accountId,
+            refetchInterval: (query) => query.state.data?.isSynced ? false : 2000,
+        }
+    )
+
     const isSyncing = React.useRef(false)
 
     const { mutate: syncEmails } = api.mail.syncEmails.useMutation({
@@ -65,7 +73,7 @@ const useThreads = () => {
         // FIX: Reduced from 5s to 30s — the 5s poll only re-reads the DB, which is
         // fine for thread status updates (done/read), but actual new email fetching
         // is now driven by syncEmails above, not this poll.
-        refetchInterval: 1000 * 30
+        refetchInterval: 1000 * 60
     })
 
     // Manual refresh: re-syncs from Aurinko then immediately refetches threads
@@ -83,8 +91,9 @@ const useThreads = () => {
     return {
         threads,
         isFetching,
+        isSynced: syncStatus?.isSynced ?? false,
         account: accounts?.find((account) => account.id === accountId),
-        refetch: syncAndRefetch,   // now triggers a real Aurinko sync + DB refetch
+        refetch: syncAndRefetch,
         accounts,
         queryKey,
         accountId

@@ -88,10 +88,11 @@ class Account {
         })
     }
 
-    async getUpdatedEmails({ deltaToken, pageToken }: { deltaToken?: string, pageToken?: string }): Promise<SyncUpdatedResponse> {
-        const params: Record<string, string> = {};
+    async getUpdatedEmails({ deltaToken, pageToken, pageSize }: { deltaToken?: string, pageToken?: string, pageSize?: number }): Promise<SyncUpdatedResponse> {
+        const params: Record<string, string | number> = {};
         if (deltaToken) params.deltaToken = deltaToken;
         if (pageToken) params.pageToken = pageToken;
+        if (pageSize) params.pageSize = pageSize;
 
         const response = await axios.get<SyncUpdatedResponse>(
             `${API_BASE_URL}/email/sync/updated`,
@@ -105,19 +106,13 @@ class Account {
 
     async performInitialSync() {
         try {
-            // FIX: was 3 days — far too small. 365 days syncs a full year of inbox history.
-            // Increase further (e.g. 730) if you want 2 years of history.
-            const daysWithin = 365
-
-            let syncResponse = await this.startSync(daysWithin);
+            let syncResponse = await this.startSync(3);
 
             // Poll until Aurinko confirms sync is ready
             while (!syncResponse.ready) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                syncResponse = await this.startSync(daysWithin);
+                syncResponse = await this.startSync(3);
             }
-
-            console.log(`performInitialSync: sync ready, fetching emails for last ${daysWithin} days`)
 
             let storedDeltaToken: string = syncResponse.syncUpdatedToken
             let updatedResponse = await this.getUpdatedEmails({ deltaToken: syncResponse.syncUpdatedToken });
@@ -127,8 +122,6 @@ class Account {
                 storedDeltaToken = updatedResponse.nextDeltaToken
             }
 
-            // FIX: Paginate through ALL pages — original code was correct here but
-            // we make delta token capture more explicit
             while (updatedResponse.nextPageToken) {
                 updatedResponse = await this.getUpdatedEmails({ pageToken: updatedResponse.nextPageToken });
                 allEmails = allEmails.concat(updatedResponse.records);
@@ -137,7 +130,7 @@ class Account {
                 }
             }
 
-            console.log(`performInitialSync: fetched ${allEmails.length} emails total`)
+            console.log(`performInitialSync: fetched ${allEmails.length} emails from last 3 days`)
 
             return {
                 emails: allEmails,

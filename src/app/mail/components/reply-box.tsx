@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import EmailEditor from './email-editor'
+import EmailEditor, { type AttachmentFile } from './email-editor'
 import { useThread } from '../use-thread'
 import useThreads from '../use-threads'
 import { api, type RouterOutputs } from '@/trpc/react'
@@ -40,7 +40,7 @@ const Component = ({ replyDetails }: { replyDetails: NonNullable<RouterOutputs['
 
     }, [replyDetails, threadId])
 
-    const handleSend = async (value: string) => {
+    const handleSend = async (value: string, attachments: AttachmentFile[]) => {
         if (!replyDetails) return;
         sendEmail.mutate({
             accountId,
@@ -52,6 +52,7 @@ const Component = ({ replyDetails }: { replyDetails: NonNullable<RouterOutputs['
             cc: replyDetails.cc.map(cc => ({ name: cc.name ?? cc.address, address: cc.address })),
             replyTo: replyDetails.from,
             inReplyTo: replyDetails.id,
+            attachments: attachments.length > 0 ? attachments : undefined,
         }, {
             onSuccess: () => {
                 toast.success("Email sent")

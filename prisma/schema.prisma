@@ -179,6 +179,8 @@ model EmailAttachment {
     contentId       String?
     content         String?
     contentLocation String?
+    s3Key           String?
+    url             String?
     Email           Email   @relation(fields: [emailId], references: [id])
     emailId         String
 }

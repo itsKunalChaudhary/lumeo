@@ -14,13 +14,14 @@ import {
     Italic,
     List,
     ListOrdered,
+    Paperclip,
     Quote,
     Redo,
     Strikethrough,
     Undo,
 } from "lucide-react";
 
-const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
+const TipTapMenuBar = ({ editor, onAttach, isUploading }: { editor: Editor; onAttach?: () => void; isUploading?: boolean }) => {
     return (
         <div className="flex flex-wrap gap-2">
             <button
@@ -117,6 +118,16 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
             >
                 <Redo className="size-4 text-secondary-foreground" />
             </button>
+            {onAttach && (
+                <button
+                    type="button"
+                    onClick={onAttach}
+                    disabled={isUploading}
+                    title="Attach files"
+                >
+                    <Paperclip className={`size-4 text-secondary-foreground ${isUploading ? 'animate-pulse' : ''}`} />
+                </button>
+            )}
         </div>
     );
 };

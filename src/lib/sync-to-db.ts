@@ -251,29 +251,31 @@ async function upsertEmailAddress(address: EmailAddress, accountId: string) {
 }
 async function upsertAttachment(emailId: string, attachment: EmailAttachment) {
     try {
-        await db.emailAttachment.upsert({
-            where: { id: attachment.id ?? "" },
-            update: {
-                name: attachment.name,
-                mimeType: attachment.mimeType,
-                size: attachment.size,
-                inline: attachment.inline,
-                contentId: attachment.contentId,
-                content: attachment.content,
-                contentLocation: attachment.contentLocation,
-            },
-            create: {
-                id: attachment.id,
-                emailId,
-                name: attachment.name,
-                mimeType: attachment.mimeType,
-                size: attachment.size,
-                inline: attachment.inline,
-                contentId: attachment.contentId,
-                content: attachment.content,
-                contentLocation: attachment.contentLocation,
-            },
+        // Always deduplicate by emailId+name — Aurinko can return a different
+        // attachment id on each sync call for the same file, so we cannot rely
+        // on attachment.id as a stable key.
+        const existing = await db.emailAttachment.findFirst({
+            where: { emailId, name: attachment.name },
+            select: { id: true },
         });
+
+        const data = {
+            name: attachment.name,
+            mimeType: attachment.mimeType,
+            size: attachment.size,
+            inline: attachment.inline,
+            contentId: attachment.contentId,
+            content: attachment.content,
+            contentLocation: attachment.contentLocation,
+        };
+
+        if (existing) {
+            await db.emailAttachment.update({ where: { id: existing.id }, data });
+        } else {
+            await db.emailAttachment.create({
+                data: { ...data, id: attachment.id || undefined, emailId },
+            });
+        }
     } catch (error) {
         console.log(`Failed to upsert attachment for email ${emailId}: ${error}`);
     }

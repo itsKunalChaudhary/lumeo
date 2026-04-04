@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Pencil, X } from "lucide-react"
 
 import React from 'react'
-import EmailEditor from "./email-editor"
+import EmailEditor, { type AttachmentFile } from "./email-editor"
 import { api } from "@/trpc/react"
 import { useLocalStorage } from "usehooks-ts"
 import { toast } from "sonner"
@@ -72,7 +72,7 @@ const ComposeButton = ({ isCollapsed }: { isCollapsed?: boolean }) => {
         })
     }
 
-    const handleSend = async (value: string) => {
+    const handleSend = async (value: string, attachments: AttachmentFile[]) => {
         console.log(account)
         console.log({ value })
         if (!account) return
@@ -86,6 +86,7 @@ const ComposeButton = ({ isCollapsed }: { isCollapsed?: boolean }) => {
             cc: ccValues.map(cc => ({ name: cc.value, address: cc.value })),
             replyTo: { name: account?.name ?? 'Me', address: account?.emailAddress ?? 'me@example.com' },
             inReplyTo: undefined,
+            attachments: attachments.length > 0 ? attachments : undefined,
         }, {
             onSuccess: () => {
                 toast.success("Email sent")

@@ -15,6 +15,16 @@ import TagInput from "./tag-input";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { useLocalStorage } from "usehooks-ts";
 import AIComposeButton from "./ai-compose-button";
+import { X, File, Image, FileText } from "lucide-react";
+import { toast } from "sonner";
+
+export type AttachmentFile = {
+    name: string;
+    mimeType: string;
+    size: number;
+    s3Key: string;
+    url: string;
+}
 
 type EmailEditorProps = {
     toValues: { label: string, value: string }[];
@@ -23,7 +33,7 @@ type EmailEditorProps = {
     subject: string;
     setSubject: (subject: string) => void;
     to: string[]
-    handleSend: (value: string) => void;
+    handleSend: (value: string, attachments: AttachmentFile[]) => void;
     isSending: boolean;
 
     onToChange: (values: { label: string, value: string }[]) => void;
@@ -36,14 +46,28 @@ type EmailEditorProps = {
     isSavingDraft?: boolean;
 }
 
+function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentIcon({ mimeType }: { mimeType: string }) {
+    if (mimeType.startsWith('image/')) return <Image className="size-3.5 shrink-0" />;
+    if (mimeType.includes('pdf') || mimeType.includes('text')) return <FileText className="size-3.5 shrink-0" />;
+    return <File className="size-3.5 shrink-0" />;
+}
+
 const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, isSending, onToChange, onCcChange, defaultToolbarExpand, defaultBody, onBodyChange, handleSaveDraft, isSavingDraft }: EmailEditorProps) => {
 
     const [ref] = useAutoAnimate();
     const [accountId] = useLocalStorage('accountId', '');
     const { data: suggestions } = api.mail.getEmailSuggestions.useQuery({ accountId: accountId, query: '' }, { enabled: !!accountId });
 
-
     const [expanded, setExpanded] = React.useState(defaultToolbarExpand ?? false);
+    const [attachments, setAttachments] = React.useState<AttachmentFile[]>([]);
+    const [isUploading, setIsUploading] = React.useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const editorRef = React.useRef<ReturnType<typeof useEditor>>(null);
 
@@ -113,13 +137,40 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
 
     const [value, setValue] = React.useState(defaultBody ?? '');
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (files.length === 0) return;
+        // Reset so same file can be re-selected
+        e.target.value = '';
 
+        setIsUploading(true);
+        try {
+            const uploaded = await Promise.all(files.map(async (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const err = await res.json() as { error?: string };
+                    throw new Error(err.error ?? 'Upload failed');
+                }
+                return res.json() as Promise<AttachmentFile>;
+            }));
+            setAttachments(prev => [...prev, ...uploaded]);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to upload file');
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+    };
 
     return (
         <div>
             <div className="flex p-4 py-2 border-b">
-                {editor && <TipTapMenuBar editor={editor} />}
+                {editor && <TipTapMenuBar editor={editor} onAttach={() => fileInputRef.current?.click()} isUploading={isUploading} />}
             </div>
 
             <div ref={ref} className="p-4 pb-0 space-y-2">
@@ -155,15 +206,60 @@ const EmailEditor = ({ toValues, ccValues, subject, setSubject, to, handleSend, 
                     </p>
                 )}
             </div>
-            <div className="flex justify-end items-center gap-2 px-4 py-2">
-                {handleSaveDraft && (
-                    <Button variant="outline" disabled={isSavingDraft} onClick={() => handleSaveDraft(value)}>
-                        {isSavingDraft ? 'Saving...' : 'Save to Draft'}
-                    </Button>
+
+            {/* Attachment chips */}
+            {attachments.length > 0 && (
+                <div className="px-4 pt-2 flex flex-wrap gap-2">
+                    {attachments.map((att, i) => (
+                        <div
+                            key={i}
+                            className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs max-w-[200px]"
+                        >
+                            <AttachmentIcon mimeType={att.mimeType} />
+                            <span className="truncate flex-1">{att.name}</span>
+                            <span className="text-muted-foreground shrink-0">{formatBytes(att.size)}</span>
+                            <button
+                                type="button"
+                                onClick={() => removeAttachment(i)}
+                                className="text-muted-foreground hover:text-foreground shrink-0"
+                            >
+                                <X className="size-3" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="flex justify-between items-center gap-2 px-4 py-2">
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileChange}
+                />
+                {isUploading && (
+                    <span className="text-xs text-muted-foreground">Uploading...</span>
                 )}
-                <Button onClick={async () => { editor?.commands.clearContent(); await handleSend(value) }} isLoading={isSending}>
-                    Send
-                </Button>
+
+                <div className="flex items-center gap-2 ml-auto">
+                    {handleSaveDraft && (
+                        <Button variant="outline" disabled={isSavingDraft} onClick={() => handleSaveDraft(value)}>
+                            {isSavingDraft ? 'Saving...' : 'Save to Draft'}
+                        </Button>
+                    )}
+                    <Button
+                        onClick={async () => {
+                            editor?.commands.clearContent();
+                            await handleSend(value, attachments);
+                            setAttachments([]);
+                        }}
+                        isLoading={isSending}
+                        disabled={isUploading}
+                    >
+                        Send
+                    </Button>
+                </div>
             </div>
         </div>
     );

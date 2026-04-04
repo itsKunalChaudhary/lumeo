@@ -9,6 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { emailAddressSchema } from "@/lib/types";
 import { FREE_CREDITS_PER_DAY } from "@/app/constants";
 import axios from "axios";
+import { getFromS3AsBase64 } from "@/lib/s3";
 
 export const authoriseAccountAccess = async (accountId: string, userId: string) => {
     const account = await db.account.findFirst({
@@ -122,7 +123,18 @@ export const mailRouter = createTRPCRouter({
                         subject: true,
                         sysLabels: true,
                         id: true,
-                        sentAt: true
+                        sentAt: true,
+                        attachments: {
+                            select: {
+                                id: true,
+                                name: true,
+                                mimeType: true,
+                                size: true,
+                                inline: true,
+                                s3Key: true,
+                                url: true,
+                            }
+                        }
                     }
                 }
             },
@@ -153,7 +165,18 @@ export const mailRouter = createTRPCRouter({
                         emailLabel: true,
                         sysLabels: true,
                         id: true,
-                        sentAt: true
+                        sentAt: true,
+                        attachments: {
+                            select: {
+                                id: true,
+                                name: true,
+                                mimeType: true,
+                                size: true,
+                                inline: true,
+                                s3Key: true,
+                                url: true,
+                            }
+                        }
                     }
                 }
             },
@@ -396,10 +419,29 @@ export const mailRouter = createTRPCRouter({
         replyTo: emailAddressSchema,
         inReplyTo: z.string().optional(),
         threadId: z.string().optional(),
+        attachments: z.array(z.object({
+            name: z.string(),
+            mimeType: z.string(),
+            size: z.number(),
+            s3Key: z.string(),
+            url: z.string(),
+        })).optional(),
     })).mutation(async ({ ctx, input }) => {
         const acc = await authoriseAccountAccess(input.accountId, ctx.auth.userId)
         const account = new Account(acc.token)
         console.log('sendmail', input)
+
+        let emailAttachments: { name: string; mimeType: string; content: string }[] | undefined;
+        if (input.attachments && input.attachments.length > 0) {
+            emailAttachments = await Promise.all(
+                input.attachments.map(async (att) => ({
+                    name: att.name,
+                    mimeType: att.mimeType,
+                    content: await getFromS3AsBase64(att.s3Key),
+                }))
+            );
+        }
+
         await account.sendEmail({
             body: input.body,
             subject: input.subject,
@@ -410,6 +452,7 @@ export const mailRouter = createTRPCRouter({
             replyTo: input.replyTo,
             from: input.from,
             inReplyTo: input.inReplyTo,
+            attachments: emailAttachments,
         })
     }),
     saveDraft: protectedProcedure.input(z.object({

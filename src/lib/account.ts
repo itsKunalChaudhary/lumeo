@@ -156,6 +156,7 @@ class Account {
         cc,
         bcc,
         replyTo,
+        attachments,
     }: {
         from: EmailAddress;
         subject: string;
@@ -167,6 +168,7 @@ class Account {
         cc?: EmailAddress[];
         bcc?: EmailAddress[];
         replyTo?: EmailAddress;
+        attachments?: { name: string; mimeType: string; content: string }[];
     }) {
         try {
             const response = await axios.post(
@@ -182,6 +184,7 @@ class Account {
                     cc,
                     bcc,
                     replyTo: [replyTo],
+                    ...(attachments && attachments.length > 0 ? { attachments } : {}),
                 },
                 {
                     params: { returnIds: true },
